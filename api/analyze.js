@@ -15,10 +15,9 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(url);
-    const data = await response.json();
-    res.status(200).json(data);
+    const text = await response.text(); // get raw response as text
+    res.status(200).send(text); // send it back directly
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch from eBay", details: error.message });
   }
 }
-
