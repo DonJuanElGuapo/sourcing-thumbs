@@ -2,31 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Sourcing Thumbs (Copilot)</title>
+  <title>Sourcing Thumbs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0f172a, #1e293b);
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4">
+<body class="text-slate-100 min-h-screen flex flex-col items-center justify-center p-6">
 
-  <!-- Capture button -->
-  <button onclick="document.getElementById('cameraInput').click()"
-          class="w-full bg-indigo-500 p-4 rounded-xl font-bold">
-    📷 CAPTURE
-  </button>
-  <input type="file" id="cameraInput" accept="image/*" capture="environment"
-         class="hidden" onchange="handlePhotoUpload(event)">
+  <!-- App container -->
+  <div class="w-full max-w-md bg-slate-800/60 backdrop-blur-md rounded-3xl shadow-xl p-6 space-y-5 border border-slate-700">
 
-  <!-- Inputs -->
-  <input type="number" id="cogInput"
-         class="mt-4 w-full bg-slate-800 p-4 rounded-xl text-white"
-         placeholder="Cost of goods">
-  <input type="number" id="profitInput"
-         class="mt-4 w-full bg-slate-800 p-4 rounded-xl text-white"
-         placeholder="Desired profit">
+    <!-- Header -->
+    <h1 class="text-center text-3xl font-bold tracking-tight text-indigo-400">Sourcing Thumbs</h1>
 
-  <!-- Result -->
-  <div id="result" class="mt-4 text-center text-2xl font-bold"></div>
-  <div id="details" class="mt-2 text-center text-sm text-slate-300"></div>
+    <!-- Capture button -->
+    <button onclick="document.getElementById('cameraInput').click()"
+            class="w-full bg-indigo-500 hover:bg-indigo-600 transition-all p-4 rounded-2xl font-bold text-lg shadow-md">
+      📷 Capture Item
+    </button>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment"
+           class="hidden" onchange="handlePhotoUpload(event)">
+
+    <!-- Inputs -->
+    <div class="space-y-3">
+      <input type="number" id="cogInput"
+             class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
+             placeholder="Cost of goods ($)">
+      <input type="number" id="profitInput"
+             class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
+             placeholder="Desired profit ($)">
+    </div>
+
+    <!-- Analyze button -->
+    <button onclick="analyzeWithCopilot()"
+            class="w-full bg-emerald-500 hover:bg-emerald-600 transition-all p-4 rounded-2xl font-bold text-lg shadow-md">
+      ✅ Analyze for Resale
+    </button>
+
+    <!-- Result -->
+    <div id="result" class="text-center text-3xl font-bold mt-4"></div>
+    <div id="details" class="text-center text-sm text-slate-300"></div>
+  </div>
 
 <script>
   let base64Image = null;
@@ -57,37 +77,29 @@
     const detailsEl = document.getElementById('details');
 
     if (!base64Image) {
-      resultEl.textContent = '📷 Please add a photo first.';
+      resultEl.textContent = '📷 Add a photo first';
       return;
     }
 
     resultEl.textContent = '⏳ Analyzing...';
     detailsEl.textContent = '';
 
-    // For now, simulate Copilot response
     setTimeout(() => {
-      const avgSold = 45; // pretend comp
+      const avgSold = 45; // simulated comp
       const expectedProfit = avgSold - cog;
       const verdict = expectedProfit >= desiredProfit ? 'thumbs_up' : 'thumbs_down';
 
       if (verdict === 'thumbs_up') {
         resultEl.textContent = '👍 BUY';
+        resultEl.classList.add('text-emerald-400');
       } else {
         resultEl.textContent = '👎 PASS';
+        resultEl.classList.add('text-rose-400');
       }
 
-      detailsEl.textContent =
-        `Avg sold: $${avgSold} · Expected profit: $${expectedProfit}`;
+      detailsEl.textContent = `Avg sold: $${avgSold} · Expected profit: $${expectedProfit}`;
     }, 1500);
   }
 </script>
-
-<!-- Analyze button -->
-<button onclick="analyzeWithCopilot()"
-        class="w-full bg-emerald-500 p-4 rounded-xl font-bold mt-4">
-  ✅ Analyze for Resale
-</button>
-
 </body>
 </html>
-
