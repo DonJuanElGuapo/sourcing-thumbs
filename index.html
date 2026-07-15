@@ -2,140 +2,91 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Sourcing Thumbs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sourcing Thumbs</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
-      font-family: 'Inter', sans-serif;
-    }
-    .glass {
-      background: rgba(30, 41, 59, 0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-    }
-    .badge {
-      display: inline-block;
-      padding: 0.5rem 1rem;
-      border-radius: 9999px;
-      font-weight: bold;
-      font-size: 1.25rem;
-    }
-  </style>
 </head>
-<body class="text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-gray-900 text-gray-100 flex flex-col items-center min-h-screen p-6">
 
   <!-- Header -->
   <div class="w-full max-w-3xl flex items-center justify-center mb-6">
-    <span class="text-4xl">👗</span>
-    <h1 class="ml-2 text-3xl font-bold text-indigo-400">Sourcing Thumbs</h1>
+    <img src="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif" 
+         alt="Scanner animation" class="h-16 w-16 rounded-full shadow-lg">
+    <h1 class="ml-3 text-3xl font-bold text-indigo-400">Sourcing Thumbs</h1>
   </div>
 
-  <!-- App container -->
-  <div class="w-full max-w-3xl glass rounded-3xl shadow-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+  <!-- Upload + Inputs -->
+  <div class="bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-3xl">
+    <label class="block mb-4">
+      <span class="text-indigo-300 font-semibold">Upload Item Photo</span>
+      <input type="file" id="photoUpload" accept="image/*" 
+             class="mt-2 block w-full text-sm text-gray-300 
+                    file:mr-4 file:py-2 file:px-4 
+                    file:rounded-full file:border-0 
+                    file:text-sm file:font-semibold 
+                    file:bg-indigo-500 file:text-white 
+                    hover:file:bg-indigo-600">
+    </label>
 
-    <!-- LEFT: Photo preview -->
-    <div class="space-y-4">
-      <h2 class="text-xl font-bold text-indigo-300">Item Preview</h2>
+    <div id="photoPreview" class="mb-4 flex justify-center"></div>
 
-      <div id="previewContainer"
-           class="hidden bg-slate-900/40 rounded-2xl p-3 border border-slate-700 shadow-md">
-        <img id="previewImage" class="rounded-xl w-full" alt="Preview">
-      </div>
+    <label class="block mb-4">
+      <span class="text-indigo-300 font-semibold">Cost of Goods ($)</span>
+      <input type="number" id="cogInput" placeholder="e.g. 12.50" 
+             class="mt-2 w-full p-2 rounded bg-gray-700 text-gray-100">
+    </label>
 
-      <button onclick="document.getElementById('cameraInput').click()"
-              class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all p-4 rounded-2xl font-bold text-lg shadow-md">
-        📷 Capture / Upload Item
-      </button>
+    <label class="block mb-4">
+      <span class="text-indigo-300 font-semibold">Desired Profit Margin (%)</span>
+      <input type="number" id="marginInput" placeholder="e.g. 40" 
+             class="mt-2 w-full p-2 rounded bg-gray-700 text-gray-100">
+    </label>
 
-      <input type="file" id="cameraInput" accept="image/*" capture="environment"
-             class="hidden" onchange="handlePhotoUpload(event)">
-    </div>
-
-    <!-- RIGHT: Controls -->
-    <div class="space-y-4">
-      <h2 class="text-xl font-bold text-indigo-300">Resale Analysis</h2>
-
-      <input type="number" id="cogInput"
-             class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
-             placeholder="Cost of goods ($)">
-
-      <input type="number" id="profitInput"
-             class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
-             placeholder="Desired profit ($)">
-
-      <button onclick="analyzeItem()"
-              class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 transition-all p-4 rounded-2xl font-bold text-lg shadow-md">
-        ✅ Analyze for Resale
-      </button>
-
-      <div id="result" class="text-center mt-4"></div>
-      <div id="details" class="text-center text-sm text-slate-300"></div>
-    </div>
-
+    <button onclick="analyzeItem()" 
+            class="w-full bg-indigo-500 hover:bg-indigo-600 
+                   text-white font-bold py-2 px-4 rounded-lg">
+      Analyze Item
+    </button>
   </div>
 
-<script>
-  let base64Image = null;
+  <!-- Results -->
+  <div id="results" class="mt-6 w-full max-w-3xl bg-gray-800 rounded-xl shadow-lg p-6 hidden">
+    <h2 class="text-xl font-bold text-indigo-400 mb-4">Verdict</h2>
+    <div id="verdictText" class="text-lg"></div>
+    <div id="profitCalc" class="mt-2 text-gray-300"></div>
+  </div>
 
-  function handlePhotoUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxWidth = 800;
-        const scale = maxWidth / img.width;
-        canvas.width = maxWidth;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-
-        const previewContainer = document.getElementById('previewContainer');
-        const previewImage = document.getElementById('previewImage');
-        previewContainer.classList.remove('hidden');
-        previewImage.src = e.target.result;
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  async function analyzeItem() {
-    const cog = parseFloat(document.getElementById('cogInput').value || '0');
-    const desiredProfit = parseFloat(document.getElementById('profitInput').value || '0');
-    const resultEl = document.getElementById('result');
-    const detailsEl = document.getElementById('details');
-
-    if (!base64Image) {
-      resultEl.innerHTML = '<span class="badge bg-slate-700">📷 Add a photo first</span>';
-      detailsEl.textContent = '';
-      return;
-    }
-
-    resultEl.innerHTML = '<span class="badge bg-slate-700">⏳ Analyzing...</span>';
-    detailsEl.textContent = '';
-
-    // Simulated comps for now
-    setTimeout(() => {
-      const avgSold = 45; // placeholder average sold price
-      const expectedProfit = avgSold - cog;
-      const verdict = expectedProfit >= desiredProfit ? 'thumbs_up' : 'thumbs_down';
-
-      if (verdict === 'thumbs_up') {
-        resultEl.innerHTML = '<span class="badge bg-emerald-500 text-white">👍 BUY</span>';
-      } else {
-        resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">👎 PASS</span>';
+  <script>
+    // Preview uploaded photo
+    document.getElementById('photoUpload').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('photoPreview').innerHTML =
+            `<img src="${e.target.result}" alt="Preview" class="h-48 rounded-lg shadow-md">`;
+        };
+        reader.readAsDataURL(file);
       }
+    });
 
-      detailsEl.textContent = `Avg sold: $${avgSold} · Expected profit: $${expectedProfit}`;
-    }, 1200);
-  }
-</script>
+    // Fake analysis logic (replace with API later)
+    function analyzeItem() {
+      const cog = parseFloat(document.getElementById('cogInput').value) || 0;
+      const margin = parseFloat(document.getElementById('marginInput').value) || 0;
+
+      // Simulated resale average
+      const resaleAvg = 45; // placeholder until API integration
+      const targetProfit = cog * (margin / 100);
+      const actualProfit = resaleAvg - cog;
+
+      let verdict = actualProfit >= targetProfit ? "👍 BUY" : "👎 PASS";
+
+      document.getElementById('results').classList.remove('hidden');
+      document.getElementById('verdictText').textContent = verdict;
+      document.getElementById('profitCalc').textContent =
+        `Avg resale: $${resaleAvg} | COG: $${cog.toFixed(2)} | Profit: $${actualProfit.toFixed(2)} | Margin target: ${margin}%`;
+    }
+  </script>
 </body>
 </html>
