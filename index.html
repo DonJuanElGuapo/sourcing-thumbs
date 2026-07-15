@@ -1,1 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sourcing Thumbs (Copilot)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4">
+
+  <!-- Capture button -->
+  <button onclick="document.getElementById('cameraInput').click()"
+          class="w-full bg-indigo-500 p-4 rounded-xl font-bold">
+    📷 CAPTURE
+  </button>
+  <input type="file" id="cameraInput" accept="image/*" capture="environment"
+         class="hidden" onchange="handlePhotoUpload(event)">
+
+  <!-- Inputs -->
+  <input type="number" id="cogInput"
+         class="mt-4 w-full bg-slate-800 p-4 rounded-xl text-white"
+         placeholder="Cost of goods">
+  <input type="number" id="profitInput"
+         class="mt-4 w-full bg-slate-800 p-4 rounded-xl text-white"
+         placeholder="Desired profit">
+
+  <!-- Result -->
+  <div id="result" class="mt-4 text-center text-2xl font-bold"></div>
+  <div id="details" class="mt-2 text-center text-sm text-slate-300"></div>
+
+<script>
+  let base64Image = null;
+
+  function handlePhotoUpload(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxWidth = 800;
+        const scale = maxWidth / img.width;
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function analyzeWithCopilot() {
+    const cog = parseFloat(document.getElementById('cogInput').value || '0');
+    const desiredProfit = parseFloat(document.getElementById('profitInput').value || '0');
+    const resultEl = document.getElementById('result');
+    const detailsEl = document.getElementById('details');
+
+    if (!base64Image) {
+      resultEl.textContent = '📷 Please add a photo first.';
+      return;
+    }
+
+    resultEl.textContent = '⏳ Analyzing...';
+    detailsEl.textContent = '';
+
+    // For now, simulate Copilot response
+    setTimeout(() => {
+      const avgSold = 45; // pretend comp
+      const expectedProfit = avgSold - cog;
+      const verdict = expectedProfit >= desiredProfit ? 'thumbs_up' : 'thumbs_down';
+
+      if (verdict === 'thumbs_up') {
+        resultEl.textContent = '👍 BUY';
+      } else {
+        resultEl.textContent = '👎 PASS';
+      }
+
+      detailsEl.textContent =
+        `Avg sold: $${avgSold} · Expected profit: $${expectedProfit}`;
+    }, 1500);
+  }
+</script>
+
+<!-- Analyze button -->
+<button onclick="analyzeWithCopilot()"
+        class="w-full bg-emerald-500 p-4 rounded-xl font-bold mt-4">
+  ✅ Analyze for Resale
+</button>
+
+</body>
+</html>
 
