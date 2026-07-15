@@ -5,13 +5,7 @@ export default async function handler(req, res) {
   const query = req.query.item || "test";
 
   // eBay Finding API for completed (sold) items
-  const url = `https://svcs.sandbox.ebay.com/services/search/FindingService/v1?
-    OPERATION-NAME=findCompletedItems&
-    SERVICE-VERSION=1.13.0&
-    SECURITY-APPNAME=${appId}&
-    RESPONSE-DATA-FORMAT=JSON&
-    REST-PAYLOAD&
-    keywords=${encodeURIComponent(query)}`;
+  const url = `https://svcs.sandbox.ebay.com/services/search/FindingService/v1?OPERATION-NAME=findCompletedItems&SERVICE-VERSION=1.13.0&SECURITY-APPNAME=${appId}&RESPONSE-DATA-FORMAT=JSON&REST-PAYLOAD&keywords=${encodeURIComponent(query)}`;
 
   try {
     const response = await fetch(url);
