@@ -7,17 +7,35 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
-      background: radial-gradient(circle at top left, #0f172a, #1e293b);
+      background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+      font-family: 'Inter', sans-serif;
+    }
+    .glass {
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .fade-in {
+      animation: fadeIn 0.6s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col items-center justify-center p-6">
 
   <!-- App container -->
-  <div class="w-full max-w-md bg-slate-800/60 backdrop-blur-md rounded-3xl shadow-xl p-6 space-y-5 border border-slate-700">
+  <div class="w-full max-w-sm glass rounded-3xl shadow-2xl p-6 space-y-5 fade-in">
 
     <!-- Header -->
     <h1 class="text-center text-3xl font-bold tracking-tight text-indigo-400">Sourcing Thumbs</h1>
+
+    <!-- Photo preview -->
+    <div id="previewContainer" class="hidden">
+      <img id="previewImage" class="rounded-2xl w-full shadow-md mb-3" alt="Preview">
+    </div>
 
     <!-- Capture button -->
     <button onclick="document.getElementById('cameraInput').click()"
@@ -55,51 +73,4 @@
     const file = event.target.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxWidth = 800;
-        const scale = maxWidth / img.width;
-        canvas.width = maxWidth;
-        canvas.height = img.height * scale;
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  async function analyzeWithCopilot() {
-    const cog = parseFloat(document.getElementById('cogInput').value || '0');
-    const desiredProfit = parseFloat(document.getElementById('profitInput').value || '0');
-    const resultEl = document.getElementById('result');
-    const detailsEl = document.getElementById('details');
-
-    if (!base64Image) {
-      resultEl.textContent = '📷 Add a photo first';
-      return;
-    }
-
-    resultEl.textContent = '⏳ Analyzing...';
-    detailsEl.textContent = '';
-
-    setTimeout(() => {
-      const avgSold = 45; // simulated comp
-      const expectedProfit = avgSold - cog;
-      const verdict = expectedProfit >= desiredProfit ? 'thumbs_up' : 'thumbs_down';
-
-      if (verdict === 'thumbs_up') {
-        resultEl.textContent = '👍 BUY';
-        resultEl.classList.add('text-emerald-400');
-      } else {
-        resultEl.textContent = '👎 PASS';
-        resultEl.classList.add('text-rose-400');
-      }
-
-      detailsEl.textContent = `Avg sold: $${avgSold} · Expected profit: $${expectedProfit}`;
-    }, 1500);
-  }
-</script>
-</body>
-</html>
+      const img = new
