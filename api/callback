@@ -1,1 +1,16 @@
+// pages/api/auth/callback.js
+export default function handler(req, res) {
+  console.log('OAuth callback query:', req.query);
+  const code = req.query.code || '';
+  const state = req.query.state || '';
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(`
+    <html><body>
+      <h1>OAuth Callback Received</h1>
+      <p><strong>code</strong>: ${code}</p>
+      <p><strong>state</strong>: ${state}</p>
+      <p>Copy the code value and run the token exchange in your terminal.</p>
+    </body></html>
+  `);
+}
 
