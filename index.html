@@ -43,3 +43,100 @@
       <div id="previewContainer"
            class="hidden bg-slate-900/40 rounded-2xl p-3 border border-slate-700 shadow-md">
         <img id="previewImage" class="rounded-xl w-full" alt="Preview">
+      </div>
+
+      <button onclick="document.getElementById('cameraInput').click()"
+              class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all p-4 rounded-2xl font-bold text-lg shadow-md">
+        📷 Capture / Upload Item
+      </button>
+
+      <input type="file" id="cameraInput" accept="image/*" capture="environment"
+             class="hidden" onchange="handlePhotoUpload(event)">
+    </div>
+
+    <!-- RIGHT: Controls -->
+    <div class="space-y-4">
+      <h2 class="text-xl font-bold text-indigo-300">Resale Analysis</h2>
+
+      <input type="number" id="cogInput"
+             class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
+             placeholder="Cost of goods ($)">
+
+      <input type="number" id="profitInput"
+             class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
+             placeholder="Desired profit ($)">
+
+      <button onclick="analyzeItem()"
+              class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 transition-all p-4 rounded-2xl font-bold text-lg shadow-md">
+        ✅ Analyze for Resale
+      </button>
+
+      <div id="result" class="text-center mt-4"></div>
+      <div id="details" class="text-center text-sm text-slate-300"></div>
+    </div>
+
+  </div>
+
+<script>
+  let base64Image = null;
+
+  function handlePhotoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxWidth = 800;
+        const scale = maxWidth / img.width;
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        previewContainer.classList.remove('hidden');
+        previewImage.src = e.target.result;
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function analyzeItem() {
+    const cog = parseFloat(document.getElementById('cogInput').value || '0');
+    const desiredProfit = parseFloat(document.getElementById('profitInput').value || '0');
+    const resultEl = document.getElementById('result');
+    const detailsEl = document.getElementById('details');
+
+    if (!base64Image) {
+      resultEl.innerHTML = '<span class="badge bg-slate-700">📷 Add a photo first</span>';
+      detailsEl.textContent = '';
+      return;
+    }
+
+    resultEl.innerHTML = '<span class="badge bg-slate-700">⏳ Analyzing...</span>';
+    detailsEl.textContent = '';
+
+    // Simulated comps for now
+    setTimeout(() => {
+      const avgSold = 45; // placeholder average sold price
+      const expectedProfit = avgSold - cog;
+      const verdict = expectedProfit >= desiredProfit ? 'thumbs_up' : 'thumbs_down';
+
+      if (verdict === 'thumbs_up') {
+        resultEl.innerHTML = '<span class="badge bg-emerald-500 text-white">👍 BUY</span>';
+      } else {
+        resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">👎 PASS</span>';
+      }
+
+      detailsEl.textContent = `Avg sold: $${avgSold} · Expected profit: $${expectedProfit}`;
+    }, 1200);
+  }
+</script>
+</body>
+</html>
