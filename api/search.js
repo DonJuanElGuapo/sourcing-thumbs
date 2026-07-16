@@ -1,11 +1,7 @@
 // api/search.js
-// Fetches eBay's public "sold/completed listings" search results for a given
-// search term, routed through ScraperAPI so the request isn't blocked (403)
-// by eBay's bot detection. Returns the individual sold prices + an average.
-//
-// DEBUG MODE: add &debug=1 to the request (e.g. /api/search?q=test&debug=1)
-// to get back raw diagnostic info (html length + a snippet) instead of the
-// normal parsed response. Useful for figuring out why parsing returns 0.
+// DEBUG MODE (&debug=1) now returns the first 10 items' TITLE + PRICE so we
+// can see whether the scraped items are actually genuine, on-topic matches
+// or noise (ads, unrelated categories, bundles, etc.)
 
 const cheerio = require("cheerio");
 
@@ -47,59 +43,59 @@ module.exports = async function handler(req, res) {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    // Try a couple of different selector patterns, since eBay's markup
-    // has changed over time and varies between page layouts.
-    const selectorsToTry = [
-      "li.s-item",
-      "li.s-card",
-      "div.s-item__info",
-      "[data-testid='item-card']",
-    ];
-
+    const selectorsToTry = ["li.s-card", "li.s-item"];
     let usedSelector = null;
-    let itemCount = 0;
     for (const sel of selectorsToTry) {
-      const count = $(sel).length;
-      if (count > 0) {
+      if ($(sel).length > 0) {
         usedSelector = sel;
-        itemCount = count;
         break;
       }
     }
 
-    if (debug) {
-      return res.status(200).json({
-        query,
-        htmlLength: html.length,
-        looksLikeBlockPage:
-          html.toLowerCase().includes("captcha") ||
-          html.toLowerCase().includes("are you a human") ||
-          html.toLowerCase().includes("pardon our interruption"),
-        selectorResults: selectorsToTry.map((sel) => ({
-          selector: sel,
-          count: $(sel).length,
-        })),
-        usedSelector,
-        itemCount,
-        htmlSnippet: html.slice(0, 1500),
-      });
-    }
-
-    const prices = [];
-    const priceSelectors = [
-      ".s-item__price",
-      ".s-card__price",
-      "[data-testid='item-price']",
+    const titleSelectors = [
+      ".s-card__title",
+      ".s-item__title",
+      "[role='heading']",
+      "h3",
     ];
+    const priceSelectors = [".s-card__price", ".s-item__price"];
 
-    const container = usedSelector ? $(usedSelector) : $("li.s-item");
-    container.each((i, el) => {
+    function extractItem(el) {
+      let title = "";
+      for (const tsel of titleSelectors) {
+        title = $(el).find(tsel).first().text().trim();
+        if (title) break;
+      }
       let priceText = "";
       for (const psel of priceSelectors) {
         priceText = $(el).find(psel).first().text().trim();
         if (priceText) break;
       }
-      if (!priceText) return;
+      return { title, priceText };
+    }
+
+    if (debug) {
+      const container = usedSelector ? $(usedSelector) : $();
+      const sample = [];
+      container.each((i, el) => {
+        if (i < 15) sample.push(extractItem(el));
+      });
+      return res.status(200).json({
+        query,
+        usedSelector,
+        totalItemsFound: container.length,
+        sampleItems: sample,
+      });
+    }
+
+    const prices = [];
+    const container = usedSelector ? $(usedSelector) : $("li.s-item");
+    container.each((i, el) => {
+      const { title, priceText } = extractItem(el);
+      if (!priceText || !title) return;
+
+      // Skip obvious non-matches / noise: "shop on ebay", empty titles, etc.
+      if (/shop on ebay/i.test(title)) return;
 
       const match = priceText.replace(/,/g, "").match(/\$([0-9]+(\.[0-9]+)?)/);
       if (match) {
@@ -116,20 +112,27 @@ module.exports = async function handler(req, res) {
         count: 0,
         average: null,
         prices: [],
-        message:
-          "No sold listings found for this search term. Try adding &debug=1 to this request in your browser to see raw diagnostics.",
+        message: "No sold listings found. Try &debug=1 for diagnostics.",
       });
     }
 
-    const average = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+    // Trim outliers: drop the top and bottom 10% before averaging, since
+    // eBay result pages often include unrelated "related searches" items.
+    const sorted = [...prices].sort((a, b) => a - b);
+    const trimCount = Math.floor(sorted.length * 0.1);
+    const trimmed = sorted.slice(trimCount, sorted.length - trimCount || sorted.length);
+    const finalSet = trimmed.length > 0 ? trimmed : sorted;
+
+    const average = finalSet.reduce((sum, p) => sum + p, 0) / finalSet.length;
 
     return res.status(200).json({
       query,
-      count: prices.length,
+      count: finalSet.length,
+      totalRawMatches: prices.length,
       average: Math.round(average * 100) / 100,
-      low: Math.min(...prices),
-      high: Math.max(...prices),
-      prices: prices.slice(0, 20),
+      low: Math.min(...finalSet),
+      high: Math.max(...finalSet),
+      prices: finalSet.slice(0, 20),
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
