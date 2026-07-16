@@ -36,7 +36,7 @@ async function fetchAndParse(query, scraperApiKey) {
   const html = await response.text();
   const $ = cheerio.load(html);
 
-  const selectorsToTry = ["li.s-card", "li.s-item"];
+  const selectorsToTry = ["li.s-card", "li.s-item", "div.su-card-container"];
   let usedSelector = null;
   for (const sel of selectorsToTry) {
     if ($(sel).length > 0) {
@@ -45,8 +45,17 @@ async function fetchAndParse(query, scraperApiKey) {
     }
   }
 
-  const titleSelectors = [".s-card__title", ".s-item__title", "h3"];
-  const priceSelectors = [".s-card__price", ".s-item__price"];
+  const titleSelectors = [
+    ".s-card__title",
+    ".s-item__title",
+    "[role='heading']",
+    "h3",
+  ];
+  const priceSelectors = [
+    ".s-card__price",
+    ".s-item__price",
+    ".su-item-card__price",
+  ];
 
   function extractItem(el) {
     let title = "";
