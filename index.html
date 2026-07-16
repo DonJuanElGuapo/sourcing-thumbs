@@ -52,6 +52,10 @@
 
       <input type="file" id="cameraInput" accept="image/*" capture="environment"
              class="hidden" onchange="handlePhotoUpload(event)">
+
+      <input type="text" id="descriptionInput"
+             class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
+             placeholder="Brand, item, size (e.g. Levi's 501 jacket medium)">
     </div>
 
     <!-- RIGHT: Controls -->
@@ -110,21 +114,36 @@
   async function analyzeItem() {
     const cog = parseFloat(document.getElementById('cogInput').value || '0');
     const desiredProfit = parseFloat(document.getElementById('profitInput').value || '0');
+    const description = document.getElementById('descriptionInput').value.trim();
     const resultEl = document.getElementById('result');
     const detailsEl = document.getElementById('details');
 
-    if (!base64Image) {
-      resultEl.innerHTML = '<span class="badge bg-slate-700">📷 Add a photo first</span>';
+    if (!description) {
+      resultEl.innerHTML = '<span class="badge bg-slate-700">✏️ Enter a brand/item description first</span>';
       detailsEl.textContent = '';
       return;
     }
 
-    resultEl.innerHTML = '<span class="badge bg-slate-700">⏳ Analyzing...</span>';
+    resultEl.innerHTML = '<span class="badge bg-slate-700">⏳ Checking sold prices...</span>';
     detailsEl.textContent = '';
 
-    // Simulated comps for now
-    setTimeout(() => {
-      const avgSold = 45; // placeholder average sold price
+    try {
+      const response = await fetch('/api/search?q=' + encodeURIComponent(description));
+      const data = await response.json();
+
+      if (!response.ok) {
+        resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">⚠️ Error checking eBay</span>';
+        detailsEl.textContent = data.error || 'Unknown error';
+        return;
+      }
+
+      if (!data.count || data.count === 0) {
+        resultEl.innerHTML = '<span class="badge bg-slate-700">🤷 No sold comps found</span>';
+        detailsEl.textContent = 'Try a broader or different search term.';
+        return;
+      }
+
+      const avgSold = data.average;
       const expectedProfit = avgSold - cog;
       const verdict = expectedProfit >= desiredProfit ? 'thumbs_up' : 'thumbs_down';
 
@@ -134,8 +153,12 @@
         resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">👎 PASS</span>';
       }
 
-      detailsEl.textContent = `Avg sold: $${avgSold} · Expected profit: $${expectedProfit}`;
-    }, 1200);
+      detailsEl.textContent =
+        `Avg sold: $${avgSold} (${data.count} comps, range $${data.low}-$${data.high}) · Expected profit: $${expectedProfit.toFixed(2)}`;
+    } catch (err) {
+      resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">⚠️ Error</span>';
+      detailsEl.textContent = err.message;
+    }
   }
 </script>
 </body>
