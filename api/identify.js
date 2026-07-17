@@ -29,12 +29,18 @@ module.exports = async function handler(req, res) {
 
     const prompt =
       "Look at this photo of a clothing/fashion item. Identify it as briefly " +
-      "and specifically as possible for searching eBay - include brand (if " +
-      "visible/recognizable), item type, color, and size (if visible on a " +
-      "tag). Respond with ONLY the short search phrase, nothing else. " +
-      'Example good response: "Levi\'s 501 denim jacket blue medium". ' +
-      "If you cannot identify a brand, just describe the item clearly " +
-      '(e.g. "floral maxi dress long sleeve size M").';
+      "and specifically as possible for searching eBay - item type, color, " +
+      "and size (if visible on a tag). " +
+      "IMPORTANT: only include a brand name if you can clearly see a logo, " +
+      "tag, or other strong visual evidence of that specific brand. Do NOT " +
+      "guess a premium/name brand based on style alone (e.g. do not call " +
+      "generic sherpa slippers 'UGGs' just because they look similar) - if " +
+      "you are not confident of the exact brand, omit it and just describe " +
+      "the item generically instead. " +
+      "Respond with ONLY the short search phrase, nothing else. " +
+      'Example good response with visible brand: "Levi\'s 501 denim jacket ' +
+      'blue medium". Example good response with no confident brand: ' +
+      '"brown sherpa-lined slipper, well-worn".';
 
     const body = {
       contents: [
