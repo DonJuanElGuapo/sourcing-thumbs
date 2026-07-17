@@ -143,31 +143,38 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    let lastResult = null;
-    let attemptsMade = 0;
-    let usedFilterApplied = true;
-
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      attemptsMade = attempt;
-      const result = await fetchAndParse(query, scraperApiKey, true);
-      lastResult = result;
-      if (result.ok && result.prices.length > 0) break;
+    // Real search strategy: fire USED-only and ANY-condition attempts in
+    // PARALLEL (rather than sequentially) to keep latency reasonable, then
+    // prefer the used-only result if it found anything.
+    async function tryStrategy(usedOnly) {
+      let result = null;
+      let attempts = 0;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        attempts = attempt;
+        result = await fetchAndParse(query, scraperApiKey, usedOnly);
+        if (result.ok && result.prices.length > 0) break;
+      }
+      return { result, attempts };
     }
 
-    if (!lastResult || !lastResult.ok) {
+    const [usedRun, anyRun] = await Promise.all([
+      tryStrategy(true),
+      tryStrategy(false),
+    ]);
+
+    const attemptsMade = usedRun.attempts + anyRun.attempts;
+    let lastResult = usedRun.result;
+    let usedFilterApplied = true;
+
+    if (!usedRun.result.ok && !anyRun.result.ok) {
       return res.status(502).json({
         error: "Could not reach eBay via ScraperAPI after " + attemptsMade + " attempt(s).",
       });
     }
 
-    if (lastResult.prices.length === 0) {
+    if (!usedRun.result.prices || usedRun.result.prices.length === 0) {
+      lastResult = anyRun.result;
       usedFilterApplied = false;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        attemptsMade += 1;
-        const result = await fetchAndParse(query, scraperApiKey, false);
-        lastResult = result;
-        if (result.ok && result.prices.length > 0) break;
-      }
     }
 
     const prices = lastResult.prices;
