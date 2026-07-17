@@ -105,10 +105,47 @@
         const previewImage = document.getElementById('previewImage');
         previewContainer.classList.remove('hidden');
         previewImage.src = e.target.result;
+
+        identifyItem();
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+  }
+
+  async function identifyItem() {
+    console.log('identifyItem() called, base64Image length:', base64Image ? base64Image.length : 'null');
+    const descriptionInput = document.getElementById('descriptionInput');
+    const originalPlaceholder = descriptionInput.placeholder;
+    descriptionInput.placeholder = '🔍 Identifying item from photo...';
+    descriptionInput.disabled = true;
+
+    try {
+      const response = await fetch('/api/identify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ image: base64Image })
+      });
+      console.log('identify response status:', response.status);
+      const data = await response.json();
+      console.log('identify response data:', data);
+
+      if (response.ok && data.description) {
+        descriptionInput.value = data.description;
+      } else {
+        console.error('identify failed:', data);
+        descriptionInput.placeholder = 'Could not auto-identify - type brand/item/size manually';
+      }
+    } catch (err) {
+      console.error('identify threw an error:', err);
+      descriptionInput.placeholder = 'Could not auto-identify - type brand/item/size manually';
+    } finally {
+      descriptionInput.disabled = false;
+      if (!descriptionInput.value) {
+        descriptionInput.placeholder = originalPlaceholder;
+      }
+    }
   }
 
   async function analyzeItem() {
@@ -128,7 +165,7 @@
     detailsEl.textContent = '';
 
     try {
-      const response = await fetch('/api/search?q=' + encodeURIComponent(description));
+      const response = await fetch('/api/search?q=' + encodeURIComponent(description), { cache: 'no-store' });
       const data = await response.json();
 
       if (!response.ok) {
