@@ -15,11 +15,13 @@ const cheerio = require("cheerio");
 
 const MAX_ATTEMPTS = 3;
 
-async function fetchAndParse(query, scraperApiKey) {
+async function fetchAndParse(query, scraperApiKey, usedOnly) {
+  const conditionParam = usedOnly ? "&LH_ItemCondition=3000" : "";
   const targetUrl =
     "https://www.ebay.com/sch/i.html?_nkw=" +
     encodeURIComponent(query) +
-    "&LH_Sold=1&LH_Complete=1&_sop=13";
+    "&LH_Sold=1&LH_Complete=1&_sop=13" +
+    conditionParam;
 
   const scraperUrl =
     "https://api.scraperapi.com?api_key=" +
@@ -109,8 +111,8 @@ module.exports = async function handler(req, res) {
 
   try {
     if (debug) {
-      // Debug mode: single attempt, full diagnostics, no retries.
-      const result = await fetchAndParse(query, scraperApiKey);
+      const usedOnlyDebug = req.query.all !== "1";
+      const result = await fetchAndParse(query, scraperApiKey, usedOnlyDebug);
       if (!result.ok) {
         return res
           .status(result.status)
@@ -125,6 +127,7 @@ module.exports = async function handler(req, res) {
         });
         return res.status(200).json({
           query,
+          usedOnlyFilter: usedOnlyDebug,
           usedSelector: null,
           totalItemsFound: 0,
           note: "No known selector matched on this attempt.",
@@ -133,29 +136,38 @@ module.exports = async function handler(req, res) {
       }
       return res.status(200).json({
         query,
+        usedOnlyFilter: usedOnlyDebug,
         usedSelector: result.usedSelector,
         totalItemsFound: result.prices.length,
         prices: result.prices.slice(0, 15),
       });
     }
 
-    // Real search: retry up to MAX_ATTEMPTS times if we get 0 prices back,
-    // since eBay's alternate page layout isn't a real "no results" case.
     let lastResult = null;
     let attemptsMade = 0;
+    let usedFilterApplied = true;
+
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       attemptsMade = attempt;
-      const result = await fetchAndParse(query, scraperApiKey);
+      const result = await fetchAndParse(query, scraperApiKey, true);
       lastResult = result;
-      if (result.ok && result.prices.length > 0) {
-        break;
-      }
+      if (result.ok && result.prices.length > 0) break;
     }
 
     if (!lastResult || !lastResult.ok) {
       return res.status(502).json({
         error: "Could not reach eBay via ScraperAPI after " + attemptsMade + " attempt(s).",
       });
+    }
+
+    if (lastResult.prices.length === 0) {
+      usedFilterApplied = false;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        attemptsMade += 1;
+        const result = await fetchAndParse(query, scraperApiKey, false);
+        lastResult = result;
+        if (result.ok && result.prices.length > 0) break;
+      }
     }
 
     const prices = lastResult.prices;
@@ -184,6 +196,7 @@ module.exports = async function handler(req, res) {
       count: finalSet.length,
       totalRawMatches: prices.length,
       attemptsMade,
+      usedFilterApplied,
       average: Math.round(average * 100) / 100,
       low: Math.min(...finalSet),
       high: Math.max(...finalSet),
