@@ -133,6 +133,10 @@
 
       if (response.ok && data.description) {
         descriptionInput.value = data.description;
+        descriptionInput.classList.add('ring-2', 'ring-amber-400');
+        setTimeout(() => {
+          descriptionInput.classList.remove('ring-2', 'ring-amber-400');
+        }, 2500);
       } else {
         console.error('identify failed:', data);
         descriptionInput.placeholder = 'Could not auto-identify - type brand/item/size manually';
@@ -191,7 +195,7 @@
       }
 
       detailsEl.textContent =
-        `Avg sold: $${avgSold} (${data.count} comps, range $${data.low}-$${data.high}) · Expected profit: $${expectedProfit.toFixed(2)}`;
+        `Avg sold: $${avgSold} (${data.count} comps${data.usedFilterApplied === false ? ', any condition' : ', used/pre-owned'}, range $${data.low}-$${data.high}) · Expected profit: $${expectedProfit.toFixed(2)}`;
     } catch (err) {
       resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">⚠️ Error</span>';
       detailsEl.textContent = err.message;
