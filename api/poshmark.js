@@ -1,10 +1,10 @@
 // api/poshmark.js
 // Fetches Poshmark's public "sold" search results for a given search term,
-// routed through ScraperAPI (same pattern as api/search.js for eBay).
+// routed through ScraperAPI using its "premium" residential proxy pool
+// (Poshmark's bot detection is stronger than eBay's, so the basic proxy
+// pool gets blocked with a 403).
 //
-// DEBUG MODE: add &debug=1 to see raw diagnostics - since we don't yet know
-// Poshmark's exact current page structure, use this first to find real
-// selectors before trusting the normal (non-debug) output.
+// DEBUG MODE: add &debug=1 to see raw diagnostics.
 
 const cheerio = require("cheerio");
 
@@ -34,6 +34,7 @@ module.exports = async function handler(req, res) {
     const scraperUrl =
       "https://api.scraperapi.com?api_key=" +
       encodeURIComponent(scraperApiKey) +
+      "&premium=true" +
       "&url=" +
       encodeURIComponent(targetUrl);
 
@@ -61,13 +62,3 @@ module.exports = async function handler(req, res) {
         priceOccurrenceCount: (html.match(priceRegex) || []).length,
         rawContexts: contexts,
       });
-    }
-
-    return res.status(200).json({
-      query,
-      message: "Real parsing not yet implemented - use &debug=1 first to inspect Poshmark's page structure.",
-    });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-};
