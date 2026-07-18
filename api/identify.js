@@ -23,9 +23,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const geminiUrl =
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" +
-      encodeURIComponent(geminiApiKey);
+    const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash-lite"];
 
     const prompt =
       "Look at this photo of a clothing/fashion item. Identify it as briefly " +
@@ -37,10 +35,21 @@ module.exports = async function handler(req, res) {
       "generic sherpa slippers 'UGGs' just because they look similar) - if " +
       "you are not confident of the exact brand, omit it and just describe " +
       "the item generically instead. " +
+      "IMPORTANT: many boutique/indie brands print a short or stylized " +
+      "name on the tag (e.g. a tag that just says 'lala' in lowercase " +
+      "script) that differs from their full storefront/brand name (e.g. " +
+      "'Dressed in Lala'). If you recognize the tag as belonging to a " +
+      "known brand with a fuller commonly-searched name, use that fuller " +
+      "name in your answer instead of transcribing the short tag text " +
+      "literally, since that fuller name will get much better search " +
+      "results. If you don't recognize the short tag as any specific " +
+      "known brand, just transcribe it as-is. " +
       "Respond with ONLY the short search phrase, nothing else. " +
       'Example good response with visible brand: "Levi\'s 501 denim jacket ' +
       'blue medium". Example good response with no confident brand: ' +
-      '"brown sherpa-lined slipper, well-worn".';
+      '"brown sherpa-lined slipper, well-worn". Example good response ' +
+      'expanding a known short tag: "Dressed in Lala leopard print wide ' +
+      'leg pants".';
 
     const body = {
       contents: [
@@ -58,29 +67,45 @@ module.exports = async function handler(req, res) {
       ],
     };
 
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const geminiUrl =
+          "https://generativelanguage.googleapis.com/v1beta/models/" +
+          model +
+          ":generateContent?key=" +
+          encodeURIComponent(geminiApiKey);
+
+        const response = await fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const text =
+            data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+          if (text) {
+            return res.status(200).json({ description: text, modelUsed: model });
+          }
+          lastError = { message: "Empty response from " + model };
+          break;
+        }
+
+        lastError = data;
+
+        if (response.status !== 503 && response.status !== 429) {
+          return res.status(response.status).json({ error: data });
+        }
+      }
+    }
+
+    return res.status(503).json({
+      error: lastError || { message: "All models unavailable after retries." },
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data });
-    }
-
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-
-    if (!text) {
-      return res.status(200).json({
-        description: "",
-        message: "Gemini couldn't identify the item. Try a clearer photo or type the description manually.",
-      });
-    }
-
-    return res.status(200).json({ description: text });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
