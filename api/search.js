@@ -74,6 +74,7 @@ async function fetchAndParse(query, scraperApiKey, usedOnly) {
   }
 
   const prices = [];
+  const itemsDebug = [];
   const container = usedSelector ? $(usedSelector) : $();
   container.each((i, el) => {
     const { title, priceText } = extractItem(el);
@@ -85,11 +86,12 @@ async function fetchAndParse(query, scraperApiKey, usedOnly) {
       const value = parseFloat(match[1]);
       if (!isNaN(value) && value > 0 && value < 3000) {
         prices.push(value);
+        itemsDebug.push({ title: title.slice(0, 80), priceText, parsedValue: value });
       }
     }
   });
 
-  return { ok: true, usedSelector, prices, html, $ };
+  return { ok: true, usedSelector, prices, itemsDebug, html, $ };
 }
 
 module.exports = async function handler(req, res) {
@@ -139,6 +141,7 @@ module.exports = async function handler(req, res) {
         usedOnlyFilter: usedOnlyDebug,
         usedSelector: result.usedSelector,
         totalItemsFound: result.prices.length,
+        sampleItemsWithTitles: result.itemsDebug ? result.itemsDebug.slice(0, 15) : undefined,
         prices: result.prices.slice(0, 15),
       });
     }
