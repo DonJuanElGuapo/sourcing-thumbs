@@ -53,6 +53,14 @@
       <input type="file" id="cameraInput" accept="image/*" capture="environment"
              class="hidden" onchange="handlePhotoUpload(event)">
 
+      <button id="secondPhotoBtn" onclick="document.getElementById('cameraInput2').click()"
+              class="hidden w-full bg-slate-700 hover:bg-slate-600 transition-all p-2 rounded-xl text-sm text-slate-300">
+        📷 Add close-up (e.g. tag) &amp; re-identify
+      </button>
+
+      <input type="file" id="cameraInput2" accept="image/*" capture="environment"
+             class="hidden" onchange="handleSecondPhotoUpload(event)">
+
       <input type="text" id="descriptionInput"
              class="w-full bg-slate-900/70 p-4 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-400 outline-none"
              placeholder="Brand, item, size (e.g. Levi's 501 jacket medium)">
@@ -90,6 +98,30 @@
 
 <script>
   let base64Image = null;
+  let base64Image2 = null;
+
+  function handleSecondPhotoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxWidth = 800;
+        const scale = maxWidth / img.width;
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        base64Image2 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        identifyItem();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
 
   async function tryBrightData() {
     const description = document.getElementById('descriptionInput').value.trim();
@@ -145,6 +177,8 @@
     const file = event.target.files[0];
     if (!file) return;
 
+    base64Image2 = null;
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -162,6 +196,8 @@
         const previewImage = document.getElementById('previewImage');
         previewContainer.classList.remove('hidden');
         previewImage.src = e.target.result;
+
+        document.getElementById('secondPhotoBtn').classList.remove('hidden');
 
         identifyItem();
       };
@@ -182,7 +218,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
-        body: JSON.stringify({ image: base64Image })
+        body: JSON.stringify({ image: base64Image, image2: base64Image2 })
       });
       console.log('identify response status:', response.status);
       const data = await response.json();
