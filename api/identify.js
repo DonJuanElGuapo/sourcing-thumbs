@@ -2,7 +2,6 @@
 // Takes a base64-encoded photo (sent from the browser) and asks Gemini to
 // identify the clothing item - brand, type, color, size if visible - in a
 // short phrase suitable for plugging straight into an eBay search.
-// Optionally accepts a second image (e.g. a tag close-up) for better ID.
 
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -24,7 +23,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash-lite"];
+    const modelsToTry = ["gemini-flash-latest", "gemini-3.1-flash-lite"];
 
     const prompt =
       "Look at these photo(s) of a clothing/fashion item" +
