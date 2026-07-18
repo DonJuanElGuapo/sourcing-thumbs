@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- v2 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -192,16 +191,13 @@
         }
       } else {
         console.error('identify failed:', data);
-        descriptionInput.placeholder = 'Could not auto-identify - type brand/item/size manually';
+        descriptionInput.placeholder = 'Could not auto-identify (' + (data?.error?.error?.message || data?.error?.message || data?.message || 'unknown error') + ') - type manually';
       }
     } catch (err) {
       console.error('identify threw an error:', err);
       descriptionInput.placeholder = 'Could not auto-identify - type brand/item/size manually';
     } finally {
       descriptionInput.disabled = false;
-      if (!descriptionInput.value) {
-        descriptionInput.placeholder = originalPlaceholder;
-      }
     }
   }
 
