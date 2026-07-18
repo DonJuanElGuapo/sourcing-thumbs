@@ -58,6 +58,11 @@
         📷 Add close-up (e.g. tag) &amp; re-identify
       </button>
 
+      <div id="secondPhotoConfirm" class="hidden flex items-center gap-2 bg-slate-900/40 rounded-xl p-2 border border-emerald-600/50">
+        <img id="secondPhotoThumb" class="w-10 h-10 object-cover rounded-lg" alt="Close-up thumbnail">
+        <span class="text-xs text-emerald-400">✅ Close-up added — re-identifying...</span>
+      </div>
+
       <input type="file" id="cameraInput2" accept="image/*" capture="environment"
              class="hidden" onchange="handleSecondPhotoUpload(event)">
 
@@ -116,6 +121,13 @@
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         base64Image2 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+        const confirmEl = document.getElementById('secondPhotoConfirm');
+        const thumbEl = document.getElementById('secondPhotoThumb');
+        thumbEl.src = e.target.result;
+        confirmEl.classList.remove('hidden');
+        confirmEl.querySelector('span').textContent = '✅ Close-up added — re-identifying...';
+
         identifyItem();
       };
       img.src = e.target.result;
@@ -178,6 +190,7 @@
     if (!file) return;
 
     base64Image2 = null;
+    document.getElementById('secondPhotoConfirm').classList.add('hidden');
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -230,6 +243,9 @@
         setTimeout(() => {
           descriptionInput.classList.remove('ring-2', 'ring-amber-400');
         }, 2500);
+        if (base64Image2) {
+          document.getElementById('secondPhotoConfirm').querySelector('span').textContent = '✅ Close-up used for this result';
+        }
       } else {
         console.error('identify failed:', data);
         descriptionInput.placeholder = 'Could not auto-identify - type brand/item/size manually';
@@ -284,16 +300,4 @@
       if (verdict === 'thumbs_up') {
         resultEl.innerHTML = '<span class="badge bg-emerald-500 text-white">👍 BUY</span>';
       } else {
-        resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">👎 PASS</span>';
-      }
-
-      detailsEl.textContent =
-        `Avg sold: $${avgSold} (${data.count} comps${data.usedFilterApplied === false ? ', any condition' : ', used/pre-owned'}, range $${data.low}-$${data.high}) · Expected profit: $${expectedProfit.toFixed(2)}`;
-    } catch (err) {
-      resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">⚠️ Error</span>';
-      detailsEl.textContent = err.message;
-    }
-  }
-</script>
-</body>
-</html>
+        resultEl.innerHTML = '<span class="badge bg-rose-500
