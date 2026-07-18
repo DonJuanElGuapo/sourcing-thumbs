@@ -300,4 +300,16 @@
       if (verdict === 'thumbs_up') {
         resultEl.innerHTML = '<span class="badge bg-emerald-500 text-white">👍 BUY</span>';
       } else {
-        resultEl.innerHTML = '<span class="badge bg-rose-500
+        resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">👎 PASS</span>';
+      }
+
+      detailsEl.textContent =
+        `Avg sold: $${avgSold} (${data.count} comps${data.usedFilterApplied === false ? ', any condition' : ', used/pre-owned'}, range $${data.low}-$${data.high}) · Expected profit: $${expectedProfit.toFixed(2)}`;
+    } catch (err) {
+      resultEl.innerHTML = '<span class="badge bg-rose-500 text-white">⚠️ Error</span>';
+      detailsEl.textContent = err.message;
+    }
+  }
+</script>
+</body>
+</html>
