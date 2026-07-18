@@ -1,10 +1,10 @@
 // api/poshmark.js
 // Fetches Poshmark's public "sold" search results for a given search term,
-// routed through ScraperAPI using its "premium" residential proxy pool
-// (Poshmark's bot detection is stronger than eBay's, so the basic proxy
-// pool gets blocked with a 403).
+// routed through ScraperAPI (same pattern as api/search.js for eBay).
 //
-// DEBUG MODE: add &debug=1 to see raw diagnostics.
+// DEBUG MODE: add &debug=1 to see raw diagnostics - since we don't yet know
+// Poshmark's exact current page structure, use this first to find real
+// selectors before trusting the normal (non-debug) output.
 
 const cheerio = require("cheerio");
 
@@ -38,7 +38,22 @@ module.exports = async function handler(req, res) {
       "&url=" +
       encodeURIComponent(targetUrl);
 
-    const response = await fetch(scraperUrl);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+    let response;
+    try {
+      response = await fetch(scraperUrl, { signal: controller.signal });
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      if (fetchErr.name === "AbortError") {
+        return res.status(504).json({
+          error: "Request to ScraperAPI/Poshmark timed out after 25 seconds (premium proxy requests can be slow).",
+        });
+      }
+      throw fetchErr;
+    }
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       return res
@@ -62,3 +77,13 @@ module.exports = async function handler(req, res) {
         priceOccurrenceCount: (html.match(priceRegex) || []).length,
         rawContexts: contexts,
       });
+    }
+
+    return res.status(200).json({
+      query,
+      message: "Real parsing not yet implemented - use &debug=1 first to inspect Poshmark's page structure.",
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
